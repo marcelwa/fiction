@@ -1,26 +1,44 @@
-cmake_minimum_required(VERSION 3.2)
+# Large parts of this build system are based on Jason Turner's C++ Starter Project (https://github.com/lefticus/cpp_starter_project)
+
+cmake_minimum_required(VERSION 3.15)
 project(fiction
         LANGUAGES CXX
-        VERSION 0.3.2)
+        VERSION 0.4.0)
 
-# C++17
+include(cmake/StandardProjectSettings.cmake)
+include(cmake/PreventInSourceBuilds.cmake)
+
+# Require C++17
 set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-# Set debug and release build options
-if (MSVC)
-    set(CMAKE_CXX_FLAGS_DEBUG   "${CMAKE_CXX_FLAGS_DEBUG}")
-    set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} /w /O2")
-else ()
-    set(CMAKE_CXX_FLAGS_DEBUG   "${CMAKE_CXX_FLAGS_DEBUG} -Wall -Wextra -Wpedantic -Wno-unknown-pragmas -Wno-mismatched-tags -Wno-gnu-anonymous-struct -Wno-nested-anon-types -g -fms-extensions")
-    set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -w -O3")
-endif ()
+# Interface library to set project options
+add_library(project_options INTERFACE)
 
-# Set release mode to default
-if (NOT CMAKE_BUILD_TYPE OR CMAKE_BUILD_TYPE STREQUAL "")
-    set(CMAKE_BUILD_TYPE "Release" CACHE STRING "" FORCE)
-endif ()
-# Set the possible values of build type for cmake-gui
-set_property(CACHE CMAKE_BUILD_TYPE PROPERTY STRINGS "Debug" "Release")
+# Option to enable time tracing with clang
+if(CMAKE_CXX_COMPILER_ID MATCHES ".*Clang")
+  option(ENABLE_BUILD_WITH_TIME_TRACE "Enable -ftime-trace to generate time tracing .json files on clang" OFF)
+  if(ENABLE_BUILD_WITH_TIME_TRACE)
+    target_compile_options(project_options INTERFACE -ftime-trace)
+  endif()
+endif()
+
+# Use the warnings specified in CompilerWarnings.cmake
+add_library(project_warnings INTERFACE)
+
+# Enable cache system
+include(cmake/Cache.cmake)
+
+# Standard compiler warnings
+include(cmake/CompilerWarnings.cmake)
+set_project_warnings(project_warnings)
+
+# Sanitizer options if supported by compiler
+include(cmake/Sanitizers.cmake)
+enable_sanitizers(project_options)
+
+# Allow for static analysis options
+include(cmake/StaticAnalyzers.cmake)
 
 # Enable progress bars
 if (NOT WIN32)
@@ -30,32 +48,41 @@ if (NOT WIN32)
     endif ()
 endif()
 
-# Enable Mugen
-option(ENABLE_MUGEN "Enable the usage of Mugen, a Python3 library by Winston Haaswijk for FCN one-pass synthesis, and its dependencies" ON)
-if (ENABLE_MUGEN)
-    add_definitions(-DMUGEN)
-endif ()
-
 # Include header files
 include_directories(src/algo/ src/io/ src/io/cmd/ src/tech/ src/topo/ src/util/)
 
 # Find source files
 file(GLOB_RECURSE SOURCES src/*.cpp src/*.h)
+
 # Add configuration file
 configure_file(src/util/version_info.h.in util/version_info.h)
 # Include configuration file
 include_directories(${PROJECT_BINARY_DIR}/util/)
 
+# Testing
+option(FICTION_TEST "Build tests" OFF)
+
+# Include tests
+if (FICTION_TEST)
+    enable_testing()
+    message(STATUS "Building tests")
+    add_subdirectory(test)
+endif ()
+
+# Custom install prefix for libraries
+set(LIB_PREFIX ${CMAKE_SOURCE_DIR}/libs)
+add_subdirectory(${LIB_PREFIX})
+
 # Require Boost libraries
 find_package(Boost COMPONENTS system filesystem)
 if (Boost_FOUND)
-	include_directories(${Boost_INCLUDE_DIRS})
+	include_directories(SYSTEM ${Boost_INCLUDE_DIRS})
 	link_directories(${Boost_LIBRARY_DIRS})
 else ()
 	message(STATUS "Please configure Boost_CUSTOM_INCLUDE_DIRS and Boost_CUSTOM_LIBRARY_DIRS manually.")
 	set(Boost_CUSTOM_INCLUDE_DIRS "" CACHE PATH "Boost include path")
 	set(Boost_CUSTOM_LIBRARY_DIRS "" CACHE PATH "Boost library path")
-	include_directories(${Boost_CUSTOM_INCLUDE_DIRS})
+	include_directories(SYSTEM ${Boost_CUSTOM_INCLUDE_DIRS})
 	link_directories(${Boost_CUSTOM_LIBRARY_DIRS})
 endif ()
 
@@ -65,9 +92,6 @@ option(BUILD_LIBS_VERBOSE "Output status and warnings during library build" OFF)
 if (NOT BUILD_LIBS_VERBOSE)
     set(LIB_OUTPUT_CHANNEL > /dev/null)
 endif ()
-
-# Custom install prefix for libraries
-set(LIB_PREFIX ${CMAKE_SOURCE_DIR}/libs)
 
 # Set up a directory for Z3 solver
 set(Z3_DIR ${PROJECT_BINARY_DIR}/z3)
@@ -117,36 +141,14 @@ elseif (WIN32)
     set(Z3_LINK_TARGET libz3.lib)
     set(Z3_INCLUDE_DIR "${LIB_PREFIX}/z3/src/api" CACHE PATH "Path to Z3's custom include directory")
     set(Z3_LIB_DIR     "${LIB_PREFIX}/z3/build" CACHE PATH "Path to Z3's custom library directory")
-    include_directories(${Z3_INCLUDE_DIR}/c++)
+    include_directories(SYSTEM ${Z3_INCLUDE_DIR}/c++)
 endif ()
 
 # Include Z3
-include_directories(${Z3_INCLUDE_DIR}/)
+include_directories(SYSTEM ${Z3_INCLUDE_DIR}/)
 
 # Include cppitertools
-include_directories(${LIB_PREFIX}/cppitertools/)
-
-# Include alice
-add_subdirectory(${LIB_PREFIX}/alice/)
-
-# Include mockturtle
-add_subdirectory(${LIB_PREFIX}/mockturtle/)
-
-# Build glucose-syrup-4.1-parallel if Mugen is enabled
-if (ENABLE_MUGEN)
-    add_custom_command(
-            OUTPUT ${PROJECT_BINARY_DIR}/glucose-syrup
-            PRE_BUILD
-            COMMAND make ${LIB_OUTPUT_CHANNEL}
-            COMMAND mv glucose-syrup ${PROJECT_BINARY_DIR}/glucose-syrup ${LIB_OUTPUT_CHANNEL}
-            COMMAND make clean ${LIB_OUTPUT_CHANNEL}
-            WORKING_DIRECTORY ${LIB_PREFIX}/mugen/glucose-syrup-4.1/parallel/)
-
-    # Make sure glucose's custom build commands are actually being executed
-    add_custom_target(glucose_syrup
-            ALL
-            DEPENDS ${PROJECT_BINARY_DIR}/glucose-syrup)
-endif ()
+include_directories(SYSTEM ${LIB_PREFIX}/cppitertools/)
 
 # Build executable
 add_executable(fiction ${SOURCES})
@@ -155,5 +157,5 @@ if (UNIX)
 endif ()
 
 # Link against Boost, Z3, alice, lorina, and pybind11
-target_link_libraries(fiction PRIVATE ${Boost_FILESYSTEM_LIBRARIES} ${Boost_SYSTEM_LIBRARIES}
+target_link_libraries(fiction PRIVATE project_options project_warnings ${Boost_FILESYSTEM_LIBRARIES} ${Boost_SYSTEM_LIBRARIES}
                                       ${Z3_LIB_DIR}/${Z3_LINK_TARGET} alice mockturtle pybind11::embed ${Python3_LIBRARIES})

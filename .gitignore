@@ -9,3 +9,4 @@ build/
 /.vs
 *.json
 __pycache__
+lcov.info

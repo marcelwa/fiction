@@ -6,18 +6,20 @@
 #define GRID_GRAPH_H
 
 #include "range.h"
+
+#include <deque>
 #include <iostream>
 #include <iterator>
-#include <utility>
 #include <memory>
-#include <deque>
+#include <optional>
 #include <unordered_map>
+#include <utility>
+
 #include <boost/array.hpp>
-#include <boost/optional.hpp>
 #include <boost/functional.hpp>
-#include <boost/graph/grid_graph.hpp>
 #include <boost/graph/astar_search.hpp>
 #include <boost/graph/filtered_graph.hpp>
+#include <boost/graph/grid_graph.hpp>
 
 /**
  * A template class representing a grid graph using the Graph library by Boost.
