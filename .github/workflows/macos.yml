@@ -1,0 +1,47 @@
+name: macOS CI
+
+on:
+  push:
+    branches-ignore:
+      - master
+
+jobs:
+  build_and_test:
+    strategy:
+      matrix:
+        os: [ macos-10.15 ]  # macos-11 when supported
+        compiler: [ g++-9, g++-10, clang++ ]  # clang++12
+        build_type: [ Debug, Release ]
+
+    name: ${{matrix.os}} with ${{matrix.compiler}} (${{matrix.build_type}} mode)
+    runs-on: ${{matrix.os}}
+
+    steps:
+      - name: Clone Repository
+        uses: actions/checkout@v2
+        with:
+          submodules: recursive
+
+      - name: Create Build Environment
+        run: cmake -E make_directory ${{github.workspace}}/build
+
+      - name: Configure CMake
+        # Use a bash shell so we can use the same syntax for environment variable
+        # access regardless of the host operating system
+        shell: bash
+        working-directory: ${{github.workspace}}/build
+
+        run: cmake $GITHUB_WORKSPACE -DCMAKE_CXX_COMPILER=${{matrix.compiler}} -DCMAKE_BUILD_TYPE=${{matrix.build_type}} -DFICTION_CLI=ON -DFICTION_TEST=ON -DFICTION_PROGRESS_BARS=OFF -DWARNINGS_AS_ERRORS=OFF
+
+      - name: Build
+        working-directory: ${{github.workspace}}/build
+        shell: bash
+
+        run: cmake --build . --config ${{matrix.build_type}} -j3  # macOS runners provide 3 cores
+
+      - name: Test
+        working-directory: ${{github.workspace}}/build
+        shell: bash
+        # Execute tests defined by the CMake configuration.
+        # See https://cmake.org/cmake/help/latest/manual/ctest.1.html for more detail
+        run: ctest -C ${{matrix.build_type}} --verbose

@@ -49,12 +49,14 @@ DisableFormat: false
 FixNamespaceComments: true
 IncludeBlocks: Regroup
 IncludeCategories:
-  - Regex: '"[a-zA-Z0-9_]+.+"$'
+  - Regex: '"[a-zA-Z0-9_\.]+.+"$'
     Priority: 1
-  - Regex: '<(alice|mockturtle|kitty|bill|nlohmann|fmt|z3)\/[a-zA-Z0-9_]+.+>$'
+  - Regex: '<(fiction)\/[a-zA-Z0-9_]+.+>$'
     Priority: 2
-  - Regex: '<[a-zA-Z0-9_]+>$'
+  - Regex: '<(alice|lorina|mockturtle|kitty|bill|nlohmann|fmt|z3)\/[a-zA-Z0-9_]+.+>$'
     Priority: 3
+  - Regex: '<[a-zA-Z0-9_]+>$'
+    Priority: 4
 IndentCaseLabels: true
 IndentWidth: 4
 Language: Cpp

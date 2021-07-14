@@ -2,10 +2,10 @@
 // Created by marcel on 31.03.21.
 //
 
-#include "clocked_layout.hpp"
-
 #include "catch.hpp"
-#include "tile_based_layout.hpp"
+
+#include <fiction/layouts/clocked_layout.hpp>
+#include <fiction/layouts/tile_based_layout.hpp>
 
 #include <set>
 

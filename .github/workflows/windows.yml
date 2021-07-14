@@ -1,0 +1,50 @@
+name: Windows CI
+
+on:
+  push:
+    branches-ignore:
+      - master
+
+jobs:
+  build_and_test:
+    strategy:
+      matrix:
+        os: [ windows-2019 ]
+        toolset: [ v142, ClangCL ]
+        build_type: [ Debug, Release ]
+        include:
+          - os: windows-2019
+            env: "Visual Studio 16 2019"
+
+    name: ${{matrix.os}} with ${{matrix.env}} and ${{matrix.toolset}} toolset (${{matrix.build_type}} mode)
+    runs-on: ${{matrix.os}}
+
+    steps:
+      - name: Clone Repository
+        uses: actions/checkout@v2
+        with:
+          submodules: recursive
+
+      - name: Create Build Environment
+        run: cmake -E make_directory ${{github.workspace}}/build
+
+      - name: Configure CMake
+        # Use a bash shell so we can use the same syntax for environment variable
+        # access regardless of the host operating system
+        shell: bash
+        working-directory: ${{github.workspace}}/build
+
+        run: cmake $GITHUB_WORKSPACE -G "${{matrix.env}}" -A x64 -T ${{matrix.toolset}} -DCMAKE_BUILD_TYPE=${{matrix.build_type}} -DFICTION_CLI=ON -DFICTION_TEST=ON -DWARNINGS_AS_ERRORS=OFF
+
+      - name: Build
+        working-directory: ${{github.workspace}}/build
+        shell: bash
+
+        run: cmake --build . --config ${{matrix.build_type}} -j2
+
+      - name: Test
+        working-directory: ${{github.workspace}}/build
+        shell: bash
+        # Execute tests defined by the CMake configuration.
+        # See https://cmake.org/cmake/help/latest/manual/ctest.1.html for more detail
+        run: ctest -C ${{matrix.build_type}} --verbose

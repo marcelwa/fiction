@@ -1,0 +1,30 @@
+//
+// Created by marcel on 05.04.19.
+//
+
+#ifndef FICTION_VERSION_HPP_IN
+#define FICTION_VERSION_HPP_IN
+
+namespace fiction
+{
+
+/**
+ * Version string.
+ */
+constexpr const char* FICTION_VERSION = "@CMAKE_PROJECT_NAME@ v@PROJECT_VERSION@";
+/**
+ * Repository string.
+ */
+constexpr const char* FICTION_REPO = "https://github.com/marcelwa/fiction";
+/**
+ * Compiled at the stored date.
+ */
+constexpr const char* COMPILED_DATE = __DATE__;
+/**
+ * Compiled at the stored time.
+ */
+constexpr const char* COMPILED_TIME = __TIME__;
+
+}  // namespace fiction
+
+#endif  // FICTION_VERSION_HPP_IN

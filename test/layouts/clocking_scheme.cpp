@@ -2,9 +2,9 @@
 // Created by marcel on 12.05.21.
 //
 
-#include "clocking_scheme.hpp"
-
 #include "catch.hpp"
+
+#include <fiction/layouts/clocking_scheme.hpp>
 
 #include <string>
 #include <vector>
